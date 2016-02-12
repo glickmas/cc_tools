@@ -44,9 +44,19 @@ for field in json_data:
             cc_hint = cc_data.CCMapHintField(cc_field)
             cc_level.add_field(cc_hint)
         elif opt_field["type_val"] == 10:
-            cc_field = opt_field["monsters"]
-            cc_monsters = cc_data.CCMonsterMovementField(cc_field)
-            cc_level.add_field(cc_monsters)
+            monsters = opt_field["monsters"]
+            cc_monsters = []
+            for monster in monsters:
+                x = monster[0]
+                y = monster[1]
+                monster_coord = cc_data.CCCoordinate(x,y)
+                cc_monsters.append(monster_coord)
+            cc_field = cc_data.CCMonsterMovementField(cc_monsters)
+
+
+           # cc_field = opt_field["monsters"]
+           # cc_monsters = cc_data.CCMonsterMovementField(cc_field)
+           # cc_level.add_field(cc_monsters)
 
     cc_datafile.add_level(cc_level)
 
@@ -70,9 +80,6 @@ print (cc_datafile)
 #        You will want a function similar to this, but called something like
 #             make_cc_data_from_json(json_data)
 
-#game_library = make_game_library_from_json(json_data)
-#game_levels = make_cc_data_from_json(json_data)
-
 # This is where you would write the data to the DAT file
 #  Note: You will use the cc_data_utils.write_cc_data_to_dat(cc_data, output_dat_file) function to do this
 #        This function takes a CCDataFile object and the filename of the output file
@@ -85,4 +92,4 @@ print (cc_datafile)
 #print("cc_returned= ", cc_returned)
 
 
-#cc_dat_utils.write_cc_data_to_dat(cc_datafile,default_output_dat_file)
+cc_dat_utils.write_cc_data_to_dat(cc_datafile,default_output_dat_file)
