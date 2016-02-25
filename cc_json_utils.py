@@ -1,95 +1,98 @@
-import json
-import sys
-import cc_dat_utils
+"""
+Methods for ecoding Chip's Challenge (CC) data from text JSON files
+Created for the class Programming for Game Designers
+"""
 import cc_data
+import json
 
-default_input_json_file = "data/sglickma_cc1.json"
-default_output_dat_file = "data/sglickma_cc1.dat"
 
-json_reader = open(default_input_json_file, "r")
-json_data = json.load(json_reader)
-json_reader.close() #Close the file now that we're done using it
+def make_optional_fields_from_json(json_optional_fields):
+    """Reads all the optional fields in from the json data representing a list of optional fields
+    This code does not error check for invalid data
+    Args:
+        json_data (data object) : Optional field data encoded as data directly read from a JSON file
+    Returns:
+        A list of all the constructed optional fields
+    """
+    cc_fields = []
 
-#def make_datafile_from_json(json_data):
-cc_datafile = cc_data.CCDataFile()
-
-for field in json_data:
-    cc_level = cc_data.CCLevel()
-
-    level_number = field["level_number"]
-    cc_level.level_number = level_number
-    time = field["time"]
-    cc_level.time = time
-    num_chips = field["num_chips"]
-    cc_level.num_chips = num_chips
-
-    upper_layer = field["upper_layer"]
-    cc_level.upper_layer = upper_layer
-    lower_layer = field["lower_layer"]
-    cc_level.lower_layer = lower_layer
-
-    optional_fields = field["optional_fields"]
-
-    for opt_field in optional_fields:
-        if opt_field["type_val"] == 3:
-            cc_field = opt_field["title"]
-            cc_title = cc_data.CCMapTitleField(cc_field)
-            cc_level.add_field(cc_title)
-        elif opt_field["type_val"] == 6:
-            cc_field = opt_field["password"]
-            cc_password = cc_data.CCEncodedPasswordField(cc_field)
-            cc_level.add_field(cc_password)
-        elif opt_field["type_val"] == 7:
-            cc_field = opt_field["hint"]
-            cc_hint = cc_data.CCMapHintField(cc_field)
-            cc_level.add_field(cc_hint)
-        elif opt_field["type_val"] == 10:
-            monsters = opt_field["monsters"]
+    for json_field in json_optional_fields:
+        field_type = json_field["type"]
+        if field_type == cc_data.CCMapTitleField.TYPE:
+            cc_field = cc_data.CCMapTitleField(json_field["title"])
+            cc_fields.append(cc_field)
+        elif field_type == cc_data.CCTrapControlsField.TYPE:
+            cc_traps = []
+            for json_trap in json_field["traps"]:
+                bx = json_trap["button"][0]
+                by = json_trap["button"][1]
+                tx = json_trap["trap"][0]
+                ty = json_trap["trap"][1]
+                cc_traps.append(cc_data.CCTrapControl(bx, by, tx, ty))
+            cc_field = cc_data.CCTrapControlsField(cc_traps)
+            cc_fields.append(cc_field)
+        elif field_type == cc_data.CCCloningMachineControlsField.TYPE:
+            cc_machines = []
+            for json_machine in json_field["cloning_machines"]:
+                bx = json_machine["button"][0]
+                by = json_machine["button"][1]
+                tx = json_machine["machine"][0]
+                ty = json_machine["machine"][1]
+                cc_machines.append(cc_data.CCCloningMachineControl(bx, by, tx, ty))
+            cc_field = cc_data.CCTrapControlsField(cc_traps)
+            cc_field = cc_data.CCCloningMachineControlsField(cc_machines)
+            cc_fields.append(cc_field)
+        elif field_type == cc_data.CCEncodedPasswordField.TYPE:
+            cc_field = cc_data.CCEncodedPasswordField(json_field["password"])
+            cc_fields.append(cc_field)
+        elif field_type == cc_data.CCMapHintField.TYPE:
+            cc_field = cc_data.CCMapHintField(json_field["hint"])
+            cc_fields.append(cc_field)
+        elif field_type == cc_data.CCMonsterMovementField.TYPE:
             cc_monsters = []
-            for monster in monsters:
-                x = monster[0]
-                y = monster[1]
-                monster_coord = cc_data.CCCoordinate(x,y)
-                cc_monsters.append(monster_coord)
+            for json_monster in json_field["monsters"]:
+                x = json_monster[0]
+                y = json_monster[1]
+                cc_monsters.append(cc_data.CCCoordinate(x, y))
             cc_field = cc_data.CCMonsterMovementField(cc_monsters)
+            cc_fields.append(cc_field)
+        else:
+            if __debug__:
+                raise AssertionError("Unsupported field type: " + str(field_type))
+            return None
+    return cc_fields
 
 
-           # cc_field = opt_field["monsters"]
-           # cc_monsters = cc_data.CCMonsterMovementField(cc_field)
-           # cc_level.add_field(cc_monsters)
-
-    cc_datafile.add_level(cc_level)
-
-print (cc_datafile)
-
-
-
-# Handling command line arguments
-#  Note: sys.argv is a list of strings that contains each command line argument
-#        The first element in the list is always the name of the python file being run
-# Command line format: <input json filename> <output dat filename>
-
-
-# Reading the JSON data in from the input file
-#json_reader = open(default_input_json_file, "r")
-#json_data = json.load(json_reader)
-#json_reader.close() #Close the file now that we're done using it
-
-# Build the Python data structure from the JSON data
-#  Note: Your code will be making a CCDataFile instead of a Game Library
-#        You will want a function similar to this, but called something like
-#             make_cc_data_from_json(json_data)
-
-# This is where you would write the data to the DAT file
-#  Note: You will use the cc_data_utils.write_cc_data_to_dat(cc_data, output_dat_file) function to do this
-#        This function takes a CCDataFile object and the filename of the output file
-#        It converts the CCDataFile object to binary and writes it to the output file
-#print("I would write the data to this file", output_dat_file)
-
-#cc_dat_utils.write_cc_data_to_dat(game_levels, default_output_dat_file)
-
-#cc_returned = make_datafile_from_json(json_data)
-#print("cc_returned= ", cc_returned)
+def make_level_from_json(json_data):
+    """Parses the JSON data representing a single level to construct a single CCLevel
+    This code does not error check for invalid data
+    Args:
+        json_data (data object) : Level data encoded as data directly read from a JSON file
+    Returns:
+        A CCLevel object constructed from the JSON data
+    """
+    cc_level = cc_data.CCLevel()
+    cc_level.level_number = json_data["level_number"]
+    cc_level.time = json_data["time"]
+    cc_level.num_chips = json_data["num_chips"]
+    cc_level.upper_layer = json_data["upper_layer"]
+    cc_level.lower_layer = json_data["lower_layer"]
+    cc_level.optional_fields = make_optional_fields_from_json(json_data["optional_fields"])
+    return cc_level
 
 
-cc_dat_utils.write_cc_data_to_dat(cc_datafile,default_output_dat_file)
+def make_cc_data_from_json(json_file):
+    """Reads a JSON file and constructs a CCDataFile object out of it
+    This code assumes a valid JSON file and does not error check for invalid data
+    Args:
+        json_file (string) : the filename of the JSON file to read in
+    Returns:
+        A CCDataFile object constructed with the data from the given file
+    """
+    cc_data_file = cc_data.CCDataFile()
+    with open(json_file, 'r') as reader:
+        json_data = json.load(reader)
+        for json_level in json_data:
+            cc_level = make_level_from_json(json_level)
+            cc_data_file.add_level(cc_level)
+    return cc_data_file
